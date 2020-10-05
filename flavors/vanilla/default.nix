@@ -114,7 +114,9 @@ in mkIf (config.flavor == "vanilla") (mkMerge [
   warnings = [ "marlin and sailfish are no longer receiving monthly security updates from Google. Support is left just for testing" ];
 
   apv.buildID = "QP1A.191005.007.A3";
-  source.manifest.rev = "android-10.0.0_r41";
+  source.manifest.rev = "android-10.0.0_r41-2";
+  
+  source.dirs."packages/apps/Messaging".patches = [ (./. + "/${toString config.androidVersion}/messaging-guava.patch") ];
 
   # HACK to use recent android source, but with old vendor files...
   source.dirs."vendor/google_devices".postPatch = ''

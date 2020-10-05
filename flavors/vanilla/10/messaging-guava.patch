@@ -1,0 +1,22 @@
+--- a/src/com/android/messaging/util/EmailAddress.java
++++ b/src/com/android/messaging/util/EmailAddress.java
+
+@@ -160,7 +160,7 @@
+         // Host must not have any disallowed characters; allowI18n dictates whether
+         // host must be ASCII.
+         if (!EMAIL_ALLOWED_CHARS.matchesAllOf(host)
+-                || (!allowI18n && !CharMatcher.ascii().matchesAllOf(host))) {
++                || (!allowI18n && !CharMatcher.ASCII.matchesAllOf(host))) {
+             return false;
+         }
+ 
+@@ -182,7 +182,7 @@
+             // User must not have any disallowed characters; allow I18n dictates whether
+             // user must be ASCII.
+             if (!EMAIL_ALLOWED_CHARS.matchesAllOf(user)
+-                    || (!allowI18n && !CharMatcher.ascii().matchesAllOf(user))) {
++                    || (!allowI18n && !CharMatcher.ASCII.matchesAllOf(user))) {
+                 return false;
+             }
+         }
+ 
