@@ -51,7 +51,6 @@ mkMerge [
     source.excludeGroups = mkDefault [
       # Exclude all devices by default
       "marlin" "muskie" "wahoo" "taimen" "crosshatch" "bonito" "coral"
-      "hikey"
     ];
     source.includeGroups = mkDefault [ config.device config.deviceFamily config.kernel.name config.kernel.configName ];
 
@@ -66,6 +65,11 @@ mkMerge [
     ];
     signing.avb.mode = "verity_only";
     signing.apex.enable = false; # Upstream forces "TARGET_FLATTEN_APEX := false" anyway
+    nixpkgs.overlays = [ (self: super: {
+      android-prepare-vendor = super.android-prepare-vendor.overrideAttrs ({ patches ? [], ...}: {
+        patches = patches ++ [ ../../pkgs/android-prepare-vendor/0004-marlin-sailfish-fix-build-failure.patch ];
+      });
+    })];
   })
   (mkIf (elem config.deviceFamily [ "taimen" "muskie" ]) {
     signing.avb.mode = "vbmeta_simple";
@@ -115,6 +119,13 @@ mkMerge [
   })
   (mkIf (config.deviceFamily == "coral") {
     signing.avb.mode = "vbmeta_chained_v2";
+    kernel.buildProductFilenames = [
+      "arch/arm64/boot/Image.lz4"
+      "arch/arm64/boot/dtbo.img"
+      "arch/arm64/boot/dts/google/qcom-base/sm8150.dtb"
+      "arch/arm64/boot/dts/google/qcom-base/sm8150-v2.dtb"
+    ];
+    kernel.configName = "floral"; # coral + flame
   })
   (mkIf (config.deviceFamily == "sunfish") {
     signing.avb.mode = "vbmeta_chained_v2";

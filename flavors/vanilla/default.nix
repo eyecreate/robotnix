@@ -8,7 +8,9 @@ let
     inherit rev sha256;
   };
 
-  phoneDeviceFamilies = [ "marlin" "taimen" "muskie" "crosshatch" "bonito" "coral" "sunfish" ];
+  phoneDeviceFamilies =
+    (optional (config.androidVersion <= 10) "marlin")
+    ++ [ "taimen" "muskie" "crosshatch" "bonito" "coral" "sunfish" ];
   supportedDeviceFamilies = phoneDeviceFamilies ++ [ "generic" ];
 
 in mkIf (config.flavor == "vanilla") (mkMerge [
@@ -47,12 +49,18 @@ in mkIf (config.flavor == "vanilla") (mkMerge [
 }
 
 (mkIf (elem config.androidVersion [ 9 10 ]) {
-  source.dirs."packages/apps/Launcher3".patches = [ (./. + "/${toString config.androidVersion}/disable-quicksearch.patch") ];
   source.dirs."device/google/marlin".patches = [ (./. + "/${toString config.androidVersion}/marlin-fix-device-names.patch") ];
+})
+(mkIf (elem config.androidVersion [ 9 10 11 ]) {
+  source.dirs."packages/apps/Launcher3".patches = [ (./. + "/${toString config.androidVersion}/disable-quicksearch.patch") ];
   source.dirs."device/google/taimen".patches = [ (./. + "/${toString config.androidVersion}/taimen-fix-device-names.patch") ];
   source.dirs."device/google/muskie".patches = [ (./. + "/${toString config.androidVersion}/muskie-fix-device-names.patch") ];
   source.dirs."device/google/crosshatch".patches = [ (./. + "/${toString config.androidVersion}/crosshatch-fix-device-names.patch") ];
   source.dirs."device/google/bonito".patches = [ (./. + "/${toString config.androidVersion}/bonito-fix-device-names.patch") ];
+})
+(mkIf (elem config.androidVersion [ 11 ]) {
+  source.dirs."device/google/coral".patches = [ (./. + "/${toString config.androidVersion}/coral-fix-device-names.patch") ];
+  source.dirs."device/google/sunfish".patches = [ (./. + "/${toString config.androidVersion}/sunfish-fix-device-names.patch") ];
 })
 
 ### Android 10 stuff ###
@@ -110,7 +118,7 @@ in mkIf (config.flavor == "vanilla") (mkMerge [
 
   # HACK to use recent android source, but with old vendor files...
   source.dirs."vendor/google_devices".postPatch = ''
-    echo QQ3A.200705.002 > ${config.device}/build_id.txt
+    echo QQ3A.200805.001 > ${config.device}/build_id.txt
   '';
 
   kernel.src = kernelSrc {
@@ -138,10 +146,36 @@ in mkIf (config.flavor == "vanilla") (mkMerge [
 ### Android 11 stuff ###
 (mkIf (config.androidVersion == 11) (mkMerge [
 {
-  source.manifest.rev = mkDefault "android-11.0.0_r1";
+  buildDateTime = mkDefault 1600909299; # 2020-09-23
 
+  # Temporarily use a recent upstream prebuilt webview until we use a chromium version that supports API >= 30
+  source.dirs."external/chromium-webview".src = pkgs.fetchgit {
+    url = "https://github.com/GrapheneOS/platform_external_chromium-webview";
+    rev = "7a4cedd75b8842a070f345e991ca595933e64197";
+    sha256 = "1fw8r3kvs6nbaykahxj9s4kv21vigpl9cfqzipbwlxgdr83fv7zr";
+  };
+  webview.prebuilt.enable = true;
+  webview.prebuilt.packageName = "com.google.android.webview";
 }
-
+(mkIf (config.device != "sunfish") {
+  source.manifest.rev = mkDefault "android-11.0.0_r1";
+  apv.buildID = mkDefault "RP1A.200720.009";
+})
+(mkIf (config.device == "sunfish") {
+  source.manifest.rev = mkDefault "android-11.0.0_r3";
+  apv.buildID = mkDefault "RP1A.200720.011";
+})
+{
+  # See also: https://github.com/GrapheneOS/os_issue_tracker/issues/325
+  # List of biometric sensors on the device, in decreasing strength. Consumed by AuthService
+  # when registering authenticators with BiometricService. Format must be ID:Modality:Strength,
+  # where: IDs are unique per device, Modality as defined in BiometricAuthenticator.java,
+  # and Strength as defined in Authenticators.java
+  resources."frameworks/base/core/res".config_biometric_sensors =
+    optional (elem config.deviceFamily [ "taimen" "muskie" "crosshatch" "bonito" ]) "0:2:15"
+    ++ optional (config.deviceFamily == "coral") "0:8:15";
+  resourceTypeOverrides."frameworks/base/core/res".config_biometric_sensors = "string-array";
+}
 ]))
 
 ])
